@@ -348,7 +348,7 @@ export default function MapTerrain() {
             {/* ============================================= */}
             {/* DECORATIVE CARTOUCHE — top-left title scroll   */}
             {/* ============================================= */}
-            <g transform="translate(30, 30)" opacity="0.35">
+            <g transform="translate(30, 30)" opacity="0.75">
                 {/* Scroll background */}
                 <rect x="0" y="0" width="160" height="80" rx="3" fill="#E8D4A0" stroke="#5C3D28" strokeWidth="0.8" opacity="0.5" />
                 {/* Scroll curl top */}
