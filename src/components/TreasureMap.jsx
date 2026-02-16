@@ -142,6 +142,8 @@ export default function TreasureMap() {
         transition={{ delay: 0.5, duration: 0.8 }}
         className="absolute top-6 right-6 md:top-8 md:right-8 z-30 flex items-center gap-3"
       >
+        <a href="https://github.com/hamza13-12" target="_blank" rel="noopener noreferrer"
+          className="text-ink-muted hover:text-ink transition-colors text-xs pointer-events-auto">GitHub</a>
         <a href="https://www.linkedin.com/in/hamza1312" target="_blank" rel="noopener noreferrer"
           className="text-ink-muted hover:text-ink transition-colors text-xs pointer-events-auto">LinkedIn</a>
         <a href="mailto:hamzaahmad277@gmail.com"
