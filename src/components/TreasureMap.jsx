@@ -14,9 +14,10 @@ const landmarks = [
   },
   {
     id: 'foundry', name: 'The Design Lab', label: 'The Foundry',
-    company: 'The Foundry', role: 'UI/UX Design Intern',
-    metricLabel: 'Toxicity research → CHI EA \'25', period: 'Jul — Aug 2023',
-    x: 18, y: 66, size: 'small', type: 'work', labelPos: 'right',
+    company: 'CHISEL Lab — The Foundry', role: 'UI/UX Design Intern',
+    metric: 'Published @ CHI EA \'25', metricLabel: 'Systemic toxicity interventions for social platforms',
+    period: 'Jul — Aug 2023',
+    x: 18, y: 66, size: 'medium', type: 'work', labelPos: 'right',
   },
   {
     id: 'adinteractive', name: 'The Vision Forge', label: 'Adinteractive',
@@ -26,7 +27,7 @@ const landmarks = [
     x: 28, y: 55, size: 'medium', type: 'work', labelPos: 'right',
   },
   {
-    id: 'lums', name: 'The Observatory', label: 'LUMS Research',
+    id: 'lums', name: 'The Observatory', label: 'CVGL Lab',
     company: 'CV & Graphics Lab — LUMS', role: 'Research Assistant',
     metric: '27% > SOTA', metricLabel: 'EEG → Images · CATVis → MICCAI 2025',
     tech: ['PyTorch', 'Diffusion Models', 'EEG', 'Transformers'], period: 'Sep 2024 — Jun 2025',
@@ -40,7 +41,7 @@ const landmarks = [
     x: 52, y: 56, size: 'medium', type: 'work', labelPos: 'below',
   },
   {
-    id: 'uplift', name: 'The Frontier', label: 'YC S25',
+    id: 'uplift', name: 'The Frontier', label: 'Uplift AI',
     company: 'Uplift AI — Y Combinator S25', role: 'Founding AI Engineer',
     metric: '125K in 14 days', metricLabel: 'Voice notes · Viral growth',
     tech: ['React Native', 'AWS Lambda', 'S3', 'DynamoDB'], period: 'Jun — Jul 2025',
@@ -49,7 +50,7 @@ const landmarks = [
   {
     id: 'uni', name: 'The Nexus', label: 'U.n.I',
     company: 'U.n.I', role: 'AI Engineer',
-    metric: '3× connections', metricLabel: 'Multi-modal discovery',
+    metric: '3× connection increase', metricLabel: 'Multi-modal discovery',
     period: 'Mar — Sep 2025', x: 70, y: 28, size: 'medium', type: 'work', labelPos: 'right',
   },
   {
