@@ -9,6 +9,9 @@ import useIsMobile from '../useIsMobile'
 
 const MAP_W = 1400
 const MAP_H = 800
+// Stable reference — passing a fresh object literal would re-fire MapViewport's
+// framing effect on every render (snapping zoom back to "fit" mid-tour).
+const MAP_SIZE = { width: MAP_W, height: MAP_H }
 
 const landmarks = [
   {
@@ -109,7 +112,7 @@ export default function TreasureMap() {
       }} />
 
       {/* The Interactive Viewport */}
-      <MapViewport mapSize={{ width: MAP_W, height: MAP_H }} isMobile={isMobile} focusTarget={focusTarget}>
+      <MapViewport mapSize={MAP_SIZE} isMobile={isMobile} focusTarget={focusTarget}>
 
         {/* Layer 1: Terrain (includes ornate border, replaces grid) */}
         <MapTerrain />

@@ -9,7 +9,7 @@ const DRAG_CONFIG = { mass: 0.5, tension: 280, friction: 26 }
 // Smooth, predictable "camera move" for tap/tour focus — a coordinated tween
 // keeps x, y and scale in lock-step instead of each spring settling on its own.
 const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
-const FOCUS_CONFIG = { duration: 620, easing: easeInOutCubic }
+const FOCUS_CONFIG = { duration: 700, easing: easeInOutCubic }
 
 export default function MapViewport({
     children,
