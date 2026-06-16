@@ -115,7 +115,7 @@ export default function TreasureMap() {
         <MapTerrain />
 
         {/* Layer 2: Path */}
-        <MapPath />
+        <MapPath isMobile={isMobile} />
 
         {/* Layer 3: Landmarks */}
         <div className="absolute inset-0 z-[20]">
@@ -253,86 +253,95 @@ export default function TreasureMap() {
         Drag to Explore
       </motion.p>
 
-      {/* Mobile: overview hint + start-tour pill (shown when no landmark is open) */}
-      {isMobile && !selected && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.6 }}
-          className="absolute inset-x-0 bottom-4 z-30 flex justify-center px-4 pointer-events-none md:hidden"
-        >
-          <div className="pointer-events-auto flex items-center gap-3 bg-parchment/95 border border-ink/20 rounded-full pl-4 pr-1.5 py-1.5 shadow-[2px_2px_0_rgba(44,24,16,0.12)]">
-            <span className="text-ink-muted text-[10px] tracking-[0.15em] uppercase font-display">Tap a landmark</span>
-            <button
-              type="button"
-              onClick={() => step(1)}
-              className="text-[10px] text-parchment bg-mapred active:bg-mapred-light px-3 py-1.5 rounded-full font-medium tracking-wide"
-            >
-              Start tour ▶
-            </button>
-          </div>
-        </motion.div>
-      )}
+      {/* Mobile bottom UI — pill (overview) / detail sheet (selected).
+          Lives inside a 100dvh layer pinned to the top so its flex-end content
+          sits above the iOS Safari toolbar; safe-bottom clears the home indicator. */}
+      {isMobile && (
+        <>
+          {/* Tap-away backdrop, only while a sheet is open */}
+          <AnimatePresence>
+            {selected && (
+              <motion.div
+                key="sheet-backdrop"
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                onClick={showOverview}
+                className="fixed inset-0 z-40 bg-ink/10 md:hidden"
+              />
+            )}
+          </AnimatePresence>
 
-      {/* Mobile: landmark detail sheet with guided-tour controls */}
-      <AnimatePresence>
-        {isMobile && selected && (
-          <>
-            <motion.div
-              key="sheet-backdrop"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              onClick={showOverview}
-              className="fixed inset-0 z-40 bg-ink/10 md:hidden"
-            />
-            <motion.div
-              key="sheet"
-              initial={{ y: '110%' }} animate={{ y: 0 }} exit={{ y: '110%' }}
-              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
-              className="fixed inset-x-0 bottom-0 z-50 md:hidden"
-            >
-              <div className="relative mx-3 mb-3 bg-[#F5E8C8] border-2 border-ink/40 rounded-xl shadow-[4px_4px_0px_rgba(44,24,16,0.18)] p-4 pt-3">
-                {/* Grab handle */}
-                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink/20" />
-
-                {/* Close */}
-                <button
-                  type="button"
-                  onClick={showOverview}
-                  aria-label="Close"
-                  className="absolute top-2.5 right-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-ink/5 text-ink-muted active:text-ink text-sm leading-none"
+          <div className="fixed inset-x-0 top-0 z-50 h-[100dvh] flex flex-col justify-end px-3 safe-bottom pointer-events-none md:hidden">
+            <AnimatePresence mode="wait" initial={false}>
+              {selected ? (
+                <motion.div
+                  key="sheet"
+                  initial={{ y: '110%' }} animate={{ y: 0 }} exit={{ y: '110%' }}
+                  transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+                  className="pointer-events-auto"
                 >
-                  ✕
-                </button>
+                  <div className="relative bg-[#F5E8C8] border-2 border-ink/40 rounded-xl shadow-[4px_4px_0px_rgba(44,24,16,0.18)] p-4 pt-3">
+                    {/* Grab handle */}
+                    <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink/20" />
 
-                <div className="pr-7">
-                  <LandmarkDetails data={selected} />
-                </div>
+                    {/* Close */}
+                    <button
+                      type="button"
+                      onClick={showOverview}
+                      aria-label="Close"
+                      className="absolute top-2.5 right-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-ink/5 text-ink-muted active:text-ink text-sm leading-none"
+                    >
+                      ✕
+                    </button>
 
-                {/* Tour controls */}
-                <div className="mt-4 flex items-center justify-between border-t border-ink/15 pt-3">
-                  <button
-                    type="button"
-                    onClick={() => step(-1)}
-                    disabled={selectedIndex === 0}
-                    className="text-[11px] font-display tracking-[0.15em] uppercase text-ink-light px-2 py-1 disabled:opacity-30"
-                  >
-                    ◀ Prev
-                  </button>
-                  <span className="font-display text-[10px] tracking-[0.2em] text-ink-muted uppercase">
-                    {selectedIndex + 1} / {landmarks.length}
-                  </span>
+                    <div className="pr-7">
+                      <LandmarkDetails data={selected} />
+                    </div>
+
+                    {/* Tour controls */}
+                    <div className="mt-4 flex items-center justify-between border-t border-ink/15 pt-3">
+                      <button
+                        type="button"
+                        onClick={() => step(-1)}
+                        disabled={selectedIndex === 0}
+                        className="text-[11px] font-display tracking-[0.15em] uppercase text-ink-light px-2 py-1.5 disabled:opacity-30"
+                      >
+                        ◀ Prev
+                      </button>
+                      <span className="font-display text-[10px] tracking-[0.2em] text-ink-muted uppercase">
+                        {selectedIndex + 1} / {landmarks.length}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => step(1)}
+                        disabled={selectedIndex === landmarks.length - 1}
+                        className="text-[11px] font-display tracking-[0.15em] uppercase text-ink-light px-2 py-1.5 disabled:opacity-30"
+                      >
+                        Next ▶
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="pill"
+                  initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}
+                  transition={{ duration: 0.4 }}
+                  className="self-center pointer-events-auto flex items-center gap-3 bg-parchment/95 border border-ink/20 rounded-full pl-4 pr-1.5 py-1.5 shadow-[2px_2px_0_rgba(44,24,16,0.12)]"
+                >
+                  <span className="text-ink-muted text-[10px] tracking-[0.15em] uppercase font-display">Tap a landmark</span>
                   <button
                     type="button"
                     onClick={() => step(1)}
-                    disabled={selectedIndex === landmarks.length - 1}
-                    className="text-[11px] font-display tracking-[0.15em] uppercase text-ink-light px-2 py-1 disabled:opacity-30"
+                    className="text-[10px] text-parchment bg-mapred active:bg-mapred-light px-3 py-1.5 rounded-full font-medium tracking-wide"
                   >
-                    Next ▶
+                    Start tour ▶
                   </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </>
+      )}
 
     </div>
   )

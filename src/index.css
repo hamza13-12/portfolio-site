@@ -110,3 +110,18 @@ body::after {
 .float-animation {
   animation: float 4s ease-in-out infinite;
 }
+
+/* Mobile: silence always-on animations so panning/zooming the map stays smooth
+   (continuous repaints fight the camera transform). */
+@media (max-width: 767px) {
+
+  .shimmer-ring,
+  .float-animation {
+    animation: none;
+  }
+}
+
+/* Keep fixed bottom UI clear of the iOS home indicator / safe area. */
+.safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom) + 0.75rem);
+}

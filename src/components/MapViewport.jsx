@@ -4,6 +4,13 @@ import { useGesture } from '@use-gesture/react'
 
 const MAX_SCALE = 1.4
 
+// Responsive 1:1 feel for dragging/pinching.
+const DRAG_CONFIG = { mass: 0.5, tension: 280, friction: 26 }
+// Smooth, predictable "camera move" for tap/tour focus — a coordinated tween
+// keeps x, y and scale in lock-step instead of each spring settling on its own.
+const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
+const FOCUS_CONFIG = { duration: 620, easing: easeInOutCubic }
+
 export default function MapViewport({
     children,
     mapSize = { width: 1400, height: 800 },
@@ -25,7 +32,7 @@ export default function MapViewport({
         x: 0,
         y: 0,
         scale: 1,
-        config: { mass: 0.5, tension: 280, friction: 26 },
+        config: DRAG_CONFIG,
     }))
 
     // Clamp a translation so the (scaled) map stays within the viewport.
@@ -85,14 +92,14 @@ export default function MapViewport({
         const ax = focusTarget.anchorX ?? 0.5
         const ay = focusTarget.anchorY ?? 0.5
         const [nx, ny] = clamp(vw * ax - focusTarget.mx * s, vh * ay - focusTarget.my * s, s)
-        api.start({ x: nx, y: ny, scale: s })
+        api.start({ x: nx, y: ny, scale: s, config: FOCUS_CONFIG })
     }, [focusTarget, api, clamp, getFitScale])
 
     useGesture(
         {
             onDrag: ({ offset: [ox, oy], pinching, cancel }) => {
                 if (pinching) return cancel()
-                api.start({ x: ox, y: oy })
+                api.start({ x: ox, y: oy, config: DRAG_CONFIG })
             },
             onPinch: ({ offset: [s], origin: [ox, oy], memo }) => {
                 const start = memo ?? { x: x.get(), y: y.get(), scale: scale.get(), ox, oy }

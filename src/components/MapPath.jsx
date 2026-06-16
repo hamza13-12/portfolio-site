@@ -24,7 +24,7 @@ const milestones = [
     { x: 1148, y: 128 },  // Cloudpacer (end)
 ]
 
-export default function MapPath() {
+export default function MapPath({ isMobile = false }) {
     const [pathLength, setPathLength] = useState(0)
     const pathRef = useRef(null)
 
@@ -88,8 +88,8 @@ export default function MapPath() {
                 />
             ))}
 
-            {/* 5. Leader/Avatar Token */}
-            {pathLength > 0 && (
+            {/* 5. Leader/Avatar Token — skipped on mobile (constant SMIL repaint fights the camera) */}
+            {pathLength > 0 && !isMobile && (
                 <circle r="6" fill="#F0DEB0" stroke="#8B2020" strokeWidth="2">
                     <animateMotion dur="8s" repeatCount="indefinite" path={journeyPathD.trim()} keyPoints="0;1" keyTimes="0;1" calcMode="linear" />
                 </circle>
