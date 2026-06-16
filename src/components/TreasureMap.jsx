@@ -1,9 +1,14 @@
-import { useRef } from 'react'
-import { motion } from 'framer-motion' // eslint-disable-line no-unused-vars
+import { useRef, useState, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars
 import Landmark from './Landmark'
+import LandmarkDetails from './LandmarkDetails'
 import MapViewport from './MapViewport'
 import MapTerrain from './MapTerrain'
 import MapPath from './MapPath'
+import useIsMobile from '../useIsMobile'
+
+const MAP_W = 1400
+const MAP_H = 800
 
 const landmarks = [
   {
@@ -64,6 +69,36 @@ const landmarks = [
 
 export default function TreasureMap() {
   const containerRef = useRef(null)
+  const isMobile = useIsMobile()
+  const [selectedIndex, setSelectedIndex] = useState(null)
+  const [focusTarget, setFocusTarget] = useState(null)
+
+  // Pan/zoom the map to a landmark and open its detail sheet (mobile).
+  const selectLandmark = useCallback((i) => {
+    const lm = landmarks[i]
+    if (!lm) return
+    setSelectedIndex(i)
+    setFocusTarget({
+      mx: (lm.x / 100) * MAP_W,
+      my: (lm.y / 100) * MAP_H,
+      scale: 0.85,
+      anchorY: 0.32, // sit the landmark in the upper third, above the sheet
+    })
+  }, [])
+
+  // Zoom back out to the whole journey.
+  const showOverview = useCallback(() => {
+    setSelectedIndex(null)
+    setFocusTarget({ mx: MAP_W / 2, my: MAP_H / 2, scale: 'fit', anchorY: 0.5 })
+  }, [])
+
+  // Step through the journey (also starts it when nothing is selected).
+  const step = useCallback((dir) => {
+    const base = selectedIndex == null ? -1 : selectedIndex
+    selectLandmark(Math.min(landmarks.length - 1, Math.max(0, base + dir)))
+  }, [selectedIndex, selectLandmark])
+
+  const selected = selectedIndex == null ? null : landmarks[selectedIndex]
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-parchment">
@@ -74,7 +109,7 @@ export default function TreasureMap() {
       }} />
 
       {/* The Interactive Viewport */}
-      <MapViewport mapSize={{ width: 1400, height: 800 }}>
+      <MapViewport mapSize={{ width: MAP_W, height: MAP_H }} isMobile={isMobile} focusTarget={focusTarget}>
 
         {/* Layer 1: Terrain (includes ornate border, replaces grid) */}
         <MapTerrain />
@@ -85,7 +120,14 @@ export default function TreasureMap() {
         {/* Layer 3: Landmarks */}
         <div className="absolute inset-0 z-[20]">
           {landmarks.map((lm, i) => (
-            <Landmark key={lm.id} data={lm} index={i} />
+            <Landmark
+              key={lm.id}
+              data={lm}
+              index={i}
+              isMobile={isMobile}
+              isActive={selectedIndex === i}
+              onSelect={() => selectLandmark(i)}
+            />
           ))}
         </div>
 
@@ -98,11 +140,11 @@ export default function TreasureMap() {
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 1 }}
-        className="absolute top-6 left-6 md:top-8 md:left-8 z-30 pointer-events-none"
+        className="absolute top-3 left-3 md:top-8 md:left-8 z-30 pointer-events-none"
       >
         <div className="relative pointer-events-auto">
           {/* Scroll border — double-line with curled corners */}
-          <div className="relative border-2 border-ink/20 px-5 py-4 bg-parchment/90"
+          <div className="relative border-2 border-ink/20 px-3 py-2.5 md:px-5 md:py-4 bg-parchment/90"
             style={{
               clipPath: 'polygon(4% 0%, 96% 0%, 100% 4%, 100% 96%, 96% 100%, 4% 100%, 0% 96%, 0% 4%)',
             }}
@@ -113,10 +155,10 @@ export default function TreasureMap() {
                 clipPath: 'polygon(3% 0%, 97% 0%, 100% 3%, 100% 97%, 97% 100%, 3% 100%, 0% 97%, 0% 3%)',
               }}
             />
-            <h1 className="font-display text-ink text-lg md:text-2xl tracking-[0.1em]">
+            <h1 className="font-display text-ink text-base sm:text-lg md:text-2xl tracking-[0.1em]">
               HAMZA AHMAD
             </h1>
-            <p className="text-ink-muted text-[10px] md:text-xs tracking-[0.2em] uppercase mt-1">
+            <p className="text-ink-muted text-[9px] sm:text-[10px] md:text-xs tracking-[0.18em] md:tracking-[0.2em] uppercase mt-1">
               AI Engineer · Researcher · Builder
             </p>
             <div className="flex items-center gap-1.5 mt-2">
@@ -135,12 +177,12 @@ export default function TreasureMap() {
         </div>
       </motion.div>
 
-      {/* Contact — top right */}
+      {/* Contact — top right (desktop) */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5, duration: 0.8 }}
-        className="absolute top-6 right-6 md:top-8 md:right-8 z-30 flex items-center gap-3"
+        className="absolute top-8 right-8 z-30 hidden md:flex items-center gap-3"
       >
         <a href="https://github.com/hamza13-12" target="_blank" rel="noopener noreferrer"
           className="text-ink-muted hover:text-ink transition-colors text-xs pointer-events-auto">GitHub</a>
@@ -152,10 +194,29 @@ export default function TreasureMap() {
         </a>
       </motion.div>
 
+      {/* Contact — top right (mobile, compact & stacked to avoid colliding with the title) */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.5, duration: 0.8 }}
+        className="absolute top-3 right-3 z-30 flex md:hidden flex-col items-end gap-1.5"
+      >
+        <div className="flex items-center gap-3">
+          <a href="https://github.com/hamza13-12" target="_blank" rel="noopener noreferrer"
+            className="text-ink-muted text-[11px]">GitHub</a>
+          <a href="https://www.linkedin.com/in/hamza1312" target="_blank" rel="noopener noreferrer"
+            className="text-ink-muted text-[11px]">LinkedIn</a>
+        </div>
+        <a href="mailto:hamzaahmad277@gmail.com"
+          className="text-[10px] text-parchment bg-mapred px-3 py-1 rounded-full font-medium tracking-wide">
+          Get in touch
+        </a>
+      </motion.div>
+
       {/* Legend — aged-note / torn-paper appearance */}
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 4, duration: 1 }}
-        className="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-30 pointer-events-none"
+        className="absolute bottom-6 left-6 md:bottom-8 md:left-8 z-30 pointer-events-none hidden md:block"
       >
         <div className="relative pointer-events-auto">
           <div className="bg-[#EDD9A3]/90 p-3 border border-ink/15 shadow-[2px_2px_0px_rgba(44,24,16,0.08)]"
@@ -184,13 +245,94 @@ export default function TreasureMap() {
         </div>
       </motion.div>
 
-      {/* Hint */}
+      {/* Hint (desktop) */}
       <motion.p
         initial={{ opacity: 0 }} animate={{ opacity: 0.5 }} transition={{ delay: 4.5, duration: 1 }}
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 text-ink-muted text-[10px] tracking-[0.25em] uppercase z-30 font-display pointer-events-none"
+        className="absolute bottom-6 left-1/2 -translate-x-1/2 text-ink-muted text-[10px] tracking-[0.25em] uppercase z-30 font-display pointer-events-none hidden md:block"
       >
         Drag to Explore
       </motion.p>
+
+      {/* Mobile: overview hint + start-tour pill (shown when no landmark is open) */}
+      {isMobile && !selected && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8, duration: 0.6 }}
+          className="absolute inset-x-0 bottom-4 z-30 flex justify-center px-4 pointer-events-none md:hidden"
+        >
+          <div className="pointer-events-auto flex items-center gap-3 bg-parchment/95 border border-ink/20 rounded-full pl-4 pr-1.5 py-1.5 shadow-[2px_2px_0_rgba(44,24,16,0.12)]">
+            <span className="text-ink-muted text-[10px] tracking-[0.15em] uppercase font-display">Tap a landmark</span>
+            <button
+              type="button"
+              onClick={() => step(1)}
+              className="text-[10px] text-parchment bg-mapred active:bg-mapred-light px-3 py-1.5 rounded-full font-medium tracking-wide"
+            >
+              Start tour ▶
+            </button>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Mobile: landmark detail sheet with guided-tour controls */}
+      <AnimatePresence>
+        {isMobile && selected && (
+          <>
+            <motion.div
+              key="sheet-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={showOverview}
+              className="fixed inset-0 z-40 bg-ink/10 md:hidden"
+            />
+            <motion.div
+              key="sheet"
+              initial={{ y: '110%' }} animate={{ y: 0 }} exit={{ y: '110%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              className="fixed inset-x-0 bottom-0 z-50 md:hidden"
+            >
+              <div className="relative mx-3 mb-3 bg-[#F5E8C8] border-2 border-ink/40 rounded-xl shadow-[4px_4px_0px_rgba(44,24,16,0.18)] p-4 pt-3">
+                {/* Grab handle */}
+                <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink/20" />
+
+                {/* Close */}
+                <button
+                  type="button"
+                  onClick={showOverview}
+                  aria-label="Close"
+                  className="absolute top-2.5 right-2.5 z-10 flex h-7 w-7 items-center justify-center rounded-full bg-ink/5 text-ink-muted active:text-ink text-sm leading-none"
+                >
+                  ✕
+                </button>
+
+                <div className="pr-7">
+                  <LandmarkDetails data={selected} />
+                </div>
+
+                {/* Tour controls */}
+                <div className="mt-4 flex items-center justify-between border-t border-ink/15 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => step(-1)}
+                    disabled={selectedIndex === 0}
+                    className="text-[11px] font-display tracking-[0.15em] uppercase text-ink-light px-2 py-1 disabled:opacity-30"
+                  >
+                    ◀ Prev
+                  </button>
+                  <span className="font-display text-[10px] tracking-[0.2em] text-ink-muted uppercase">
+                    {selectedIndex + 1} / {landmarks.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => step(1)}
+                    disabled={selectedIndex === landmarks.length - 1}
+                    className="text-[11px] font-display tracking-[0.15em] uppercase text-ink-light px-2 py-1 disabled:opacity-30"
+                  >
+                    Next ▶
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
     </div>
   )

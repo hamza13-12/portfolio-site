@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars
+import LandmarkDetails from './LandmarkDetails'
 
 const MarkerIcons = {
   education: (
@@ -75,7 +76,7 @@ const MarkerIcons = {
   )
 }
 
-export default function Landmark({ data, index }) {
+export default function Landmark({ data, index, isMobile = false, isActive = false, onSelect }) {
   const [hovered, setHovered] = useState(false)
 
   const icon = MarkerIcons[data.type] || MarkerIcons.work
@@ -83,21 +84,36 @@ export default function Landmark({ data, index }) {
   // Show tooltip below when landmark is in top ~40% of map
   const showBelow = data.y < 40
 
+  // Desktop reveals details on hover; touch has no hover, so a tap opens the
+  // detail sheet (handled by the parent) instead.
+  const showTooltip = !isMobile && hovered
+
   return (
     <div
-      className={`absolute group ${hovered ? 'z-50' : 'z-20'}`}
+      className={`absolute group ${hovered || isActive ? 'z-50' : 'z-20'}`}
       style={{ left: `${data.x}%`, top: `${data.y}%`, transform: 'translate(-50%, -50%)' }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onClick={() => { if (isMobile) onSelect?.() }}
+      role={isMobile ? 'button' : undefined}
+      aria-label={isMobile ? `${data.label} — ${data.role}` : undefined}
     >
       {/* Icon + label wrapper — this is the visual anchor */}
-      <div className="relative flex items-center justify-center cursor-pointer hover:scale-110 transition-transform duration-300">
+      <div className={`relative flex items-center justify-center cursor-pointer transition-transform duration-300 ${isActive ? 'scale-110' : 'hover:scale-110'}`}>
+
+        {/* Enlarged transparent hit target for touch (clicks bubble to the wrapper) */}
+        {isMobile && <span className="absolute -inset-4 rounded-full" aria-hidden="true" />}
 
         {/* Ink-drop shadow beneath marker */}
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-5 h-1.5 bg-ink/10 rounded-full" />
 
         {/* Base Glow — no blur for perf */}
         <div className="absolute inset-0 rounded-full opacity-30 bg-parchment-dark" />
+
+        {/* Selected highlight ring (mobile tap / tour) */}
+        {isActive && (
+          <span className="absolute -inset-2 rounded-full border-2 border-mapred/70 bg-mapred/5" aria-hidden="true" />
+        )}
 
         {/* Marker Icon Container */}
         <motion.div
@@ -113,8 +129,8 @@ export default function Landmark({ data, index }) {
           {icon}
         </motion.div>
 
-        {/* Current: Pulse Effect */}
-        {data.type === 'current' && (
+        {/* Current: Pulse Effect — skipped on mobile to avoid constant repaints */}
+        {data.type === 'current' && !isMobile && (
           <motion.div
             animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
             transition={{ duration: 2, repeat: Infinity }}
@@ -161,9 +177,9 @@ export default function Landmark({ data, index }) {
           </motion.div>
         )}
 
-        {/* Tooltip — anchored to the icon wrapper so the arrow aligns with the icon center */}
+        {/* Tooltip — desktop hover only; mobile uses the detail sheet */}
         <AnimatePresence>
-          {hovered && (
+          {showTooltip && (
             <motion.div
               initial={{ opacity: 0, y: showBelow ? -6 : 6, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -189,34 +205,7 @@ export default function Landmark({ data, index }) {
                   }
                 />
 
-                <div className="flex justify-between items-start mb-2 border-b border-ink/20 pb-1">
-                  <p className="font-display text-mapred text-xs tracking-[0.1em] uppercase font-bold">
-                    {data.name}
-                  </p>
-                  <span className="text-[10px] text-ink-muted font-serif italic">{data.period}</span>
-                </div>
-
-                <h3 className="text-ink font-serif text-xl leading-none font-bold mb-1">{data.role}</h3>
-                <p className="text-ink-light text-xs font-medium mb-3">{data.company}</p>
-
-                {data.metric && (
-                  <div className="bg-ink/5 border border-ink/10 rounded px-2 py-1.5 mb-2 relative overflow-hidden">
-                    <p className="text-mapred-light text-sm font-bold font-display relative z-10">
-                      {data.metric}
-                    </p>
-                    <p className="text-ink-muted text-[10px] leading-snug italic relative z-10">{data.metricLabel}</p>
-                  </div>
-                )}
-
-                {data.tech && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    {data.tech.map((t, i) => (
-                      <span key={i} className="text-[9px] text-ink-dark border-b border-ink/30 px-0.5 leading-tight">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <LandmarkDetails data={data} />
 
               </div>
             </motion.div>
