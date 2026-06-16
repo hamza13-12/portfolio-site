@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from 'react'
+import { useRef, useState, useCallback, useLayoutEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion' // eslint-disable-line no-unused-vars
 import Landmark from './Landmark'
 import LandmarkDetails from './LandmarkDetails'
@@ -12,6 +12,7 @@ const MAP_H = 800
 // Stable reference — passing a fresh object literal would re-fire MapViewport's
 // framing effect on every render (snapping zoom back to "fit" mid-tour).
 const MAP_SIZE = { width: MAP_W, height: MAP_H }
+const TOUR_SCALE = 0.85
 
 const landmarks = [
   {
@@ -72,36 +73,49 @@ const landmarks = [
 
 export default function TreasureMap() {
   const containerRef = useRef(null)
+  const sheetRef = useRef(null)
+  const viewportRef = useRef(null)
+  const firstFocus = useRef(true)
   const isMobile = useIsMobile()
   const [selectedIndex, setSelectedIndex] = useState(null)
-  const [focusTarget, setFocusTarget] = useState(null)
 
-  // Pan/zoom the map to a landmark and open its detail sheet (mobile).
   const selectLandmark = useCallback((i) => {
-    const lm = landmarks[i]
-    if (!lm) return
+    if (i < 0 || i >= landmarks.length) return
     setSelectedIndex(i)
-    setFocusTarget({
-      mx: (lm.x / 100) * MAP_W,
-      my: (lm.y / 100) * MAP_H,
-      scale: 0.85,
-      anchorY: 0.32, // sit the landmark in the upper third, above the sheet
-    })
   }, [])
 
-  // Zoom back out to the whole journey.
-  const showOverview = useCallback(() => {
-    setSelectedIndex(null)
-    setFocusTarget({ mx: MAP_W / 2, my: MAP_H / 2, scale: 'fit', anchorY: 0.5 })
-  }, [])
+  const showOverview = useCallback(() => setSelectedIndex(null), [])
 
   // Step through the journey (also starts it when nothing is selected).
   const step = useCallback((dir) => {
-    const base = selectedIndex == null ? -1 : selectedIndex
-    selectLandmark(Math.min(landmarks.length - 1, Math.max(0, base + dir)))
-  }, [selectedIndex, selectLandmark])
+    setSelectedIndex((cur) => {
+      const base = cur == null ? -1 : cur
+      return Math.min(landmarks.length - 1, Math.max(0, base + dir))
+    })
+  }, [])
 
   const selected = selectedIndex == null ? null : landmarks[selectedIndex]
+
+  // Drive the camera. On mobile, frame the active landmark in the space above
+  // the detail sheet (measured from the sheet) so the sheet never covers it.
+  useLayoutEffect(() => {
+    if (!isMobile) return
+    if (firstFocus.current) { firstFocus.current = false; return }
+    if (selectedIndex == null) {
+      viewportRef.current?.focusOn({ mx: MAP_W / 2, my: MAP_H / 2, scale: 'fit' })
+      return
+    }
+    const lm = landmarks[selectedIndex]
+    const sheetH = sheetRef.current?.offsetHeight ?? 0
+    const bottomInset = (sheetH || Math.round(window.innerHeight * 0.34)) + 20
+    viewportRef.current?.focusOn({
+      mx: (lm.x / 100) * MAP_W,
+      my: (lm.y / 100) * MAP_H,
+      scale: TOUR_SCALE,
+      bottomInset,
+      topInset: 120,
+    })
+  }, [selectedIndex, isMobile])
 
   return (
     <div ref={containerRef} className="relative w-full h-full overflow-hidden bg-parchment">
@@ -112,7 +126,7 @@ export default function TreasureMap() {
       }} />
 
       {/* The Interactive Viewport */}
-      <MapViewport mapSize={MAP_SIZE} isMobile={isMobile} focusTarget={focusTarget}>
+      <MapViewport ref={viewportRef} mapSize={MAP_SIZE} isMobile={isMobile}>
 
         {/* Layer 1: Terrain (includes ornate border, replaces grid) */}
         <MapTerrain />
@@ -282,7 +296,7 @@ export default function TreasureMap() {
                   transition={{ type: 'spring', damping: 32, stiffness: 320 }}
                   className="pointer-events-auto"
                 >
-                  <div className="relative bg-[#F5E8C8] border-2 border-ink/40 rounded-xl shadow-[4px_4px_0px_rgba(44,24,16,0.18)] p-4 pt-3">
+                  <div ref={sheetRef} className="relative bg-[#F5E8C8] border-2 border-ink/40 rounded-xl shadow-[4px_4px_0px_rgba(44,24,16,0.18)] p-4 pt-3">
                     {/* Grab handle */}
                     <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-ink/20" />
 

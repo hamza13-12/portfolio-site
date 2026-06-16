@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback } from 'react'
+import { useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from 'react'
 import { useSpring, animated, to } from '@react-spring/web' // eslint-disable-line no-unused-vars
 import { useGesture } from '@use-gesture/react'
 
@@ -11,14 +11,11 @@ const DRAG_CONFIG = { mass: 0.5, tension: 280, friction: 26 }
 const easeInOutCubic = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2)
 const FOCUS_CONFIG = { duration: 700, easing: easeInOutCubic }
 
-export default function MapViewport({
+const MapViewport = forwardRef(function MapViewport({
     children,
     mapSize = { width: 1400, height: 800 },
     isMobile = false,
-    // { mx, my, scale, anchorX, anchorY } in map coordinates — animate to center this point.
-    // scale may be a number or 'fit'. Pass a fresh object each time to retrigger.
-    focusTarget = null,
-}) {
+}, ref) {
     const containerRef = useRef(null)
 
     // Scale that fits the whole map inside the viewport (with a little breathing room).
@@ -81,19 +78,41 @@ export default function MapViewport({
         return () => window.removeEventListener('resize', onResize)
     }, [api, isMobile, getFitScale, clamp, x, y, scale, mapSize])
 
-    // Animate to a requested focus point (used by mobile tour / tap-to-open).
-    useEffect(() => {
-        if (!focusTarget) return
+    // Imperatively glide the camera to a focus point (mobile tour / tap-to-open).
+    // target: { mx, my, scale, anchorX, bottomInset, topInset }. scale may be 'fit'.
+    const focusOn = useCallback((target) => {
+        if (!target) return
         const vw = window.innerWidth
         const vh = window.innerHeight
-        const s = focusTarget.scale === 'fit' || focusTarget.scale == null
-            ? getFitScale()
-            : focusTarget.scale
-        const ax = focusTarget.anchorX ?? 0.5
-        const ay = focusTarget.anchorY ?? 0.5
-        const [nx, ny] = clamp(vw * ax - focusTarget.mx * s, vh * ay - focusTarget.my * s, s)
+        const s = target.scale === 'fit' || target.scale == null ? getFitScale() : target.scale
+        const sw = mapSize.width * s
+        const sh = mapSize.height * s
+        const ax = target.anchorX ?? 0.5
+
+        // Horizontal: standard clamp keeps the map covering the width.
+        let nx = vw * ax - target.mx * s
+        nx = sw >= vw ? Math.max(vw - sw, Math.min(0, nx)) : Math.max(0, Math.min(vw - sw, nx))
+
+        let ny
+        if (target.bottomInset != null) {
+            // Frame the landmark in the area above the open sheet so the sheet
+            // never covers it, while keeping the map covering that area.
+            const topInset = target.topInset ?? 0
+            const usableBottom = vh - target.bottomInset
+            ny = (topInset + usableBottom) / 2 - target.my * s
+            const minNy = usableBottom - sh   // map bottom stays at/below the sheet top (no gap)
+            const maxNy = topInset            // any gap left at the top is hidden behind the header
+            ny = minNy <= maxNy ? Math.max(minNy, Math.min(maxNy, ny)) : (minNy + maxNy) / 2
+        } else {
+            const ay = target.anchorY ?? 0.5
+            ny = vh * ay - target.my * s
+            ny = sh >= vh ? Math.max(vh - sh, Math.min(0, ny)) : Math.max(0, Math.min(vh - sh, ny))
+        }
+
         api.start({ x: nx, y: ny, scale: s, config: FOCUS_CONFIG })
-    }, [focusTarget, api, clamp, getFitScale])
+    }, [api, getFitScale, mapSize])
+
+    useImperativeHandle(ref, () => ({ focusOn }), [focusOn])
 
     useGesture(
         {
@@ -166,4 +185,6 @@ export default function MapViewport({
             />
         </div>
     )
-}
+})
+
+export default MapViewport
